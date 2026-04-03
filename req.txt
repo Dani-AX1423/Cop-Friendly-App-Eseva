@@ -1,3 +1,0 @@
-- mysql
-- python
-- packages of python for mysql conenction
