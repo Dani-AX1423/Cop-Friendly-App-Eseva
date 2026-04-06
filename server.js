@@ -10,7 +10,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---- DB CONFIG — update password if needed ----
 const db = mysql.createConnection({
-  host: 'localhost', user: 'eseva', password: 'eseva123', database: 'eseva_db'
+  host: 'localhost', user: 'appuser', password: '1234', database: 'cop_friendly_app'
 });
 db.connect(err => {
   if (err) console.error('DB Error:', err.message);

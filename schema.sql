@@ -1,10 +1,6 @@
--- =============================================
--- ESEVA - COP FRIENDLY APP | schema.sql
--- Run: sudo mariadb < schema.sql
--- =============================================
 
-CREATE DATABASE IF NOT EXISTS eseva_db;
-USE eseva_db;
+CREATE DATABASE IF NOT EXISTS cop_friendly_app;
+USE cop_friendly_app;
 
 -- ---- TABLES (3NF Normalized) ----
 
@@ -54,10 +50,11 @@ INSERT IGNORE INTO officers (name, badge_number, station) VALUES
   ('Insp. Rajan', 'TN001', 'Anna Nagar PS'),
   ('SI Meena',    'TN002', 'T Nagar PS');
 
-INSERT IGNORE INTO complaints (user_id, complaint_type, description, status) VALUES
-  (1, 'Theft',    'Mobile snatched near bus stop', 'Pending'),
-  (1, 'Noise',    'Loud music after midnight',     'Resolved'),
-  (2, 'Accident', 'Hit and run on OMR road',       'In Progress');
+-- Adding one 'stale' complaint (10 days old) to test the batch
+INSERT IGNORE INTO complaints (user_id, complaint_type, description, status, created_at) VALUES
+  (1, 'Theft', 'Old stale complaint', 'Pending', DATE_SUB(NOW(), INTERVAL 10 DAY)),
+  (1, 'Noise', 'Recent complaint', 'Pending', NOW()),
+  (2, 'Accident', 'In Progress task', 'In Progress', NOW());
 
 -- ---- VIEWS ----
 
@@ -83,7 +80,7 @@ BEGIN
     INSERT INTO audit_log (complaint_id, old_status, new_status)
     VALUES (OLD.complaint_id, OLD.status, NEW.status);
   END IF;
-END$$
+END $$
 DELIMITER ;
 
 -- ---- FUNCTION: Count complaints by user ----
@@ -96,7 +93,7 @@ BEGIN
   DECLARE total INT;
   SELECT COUNT(*) INTO total FROM complaints WHERE user_id = uid;
   RETURN total;
-END$$
+END $$
 DELIMITER ;
 
 -- ---- STORED PROCEDURE: EOD Batch — auto-resolve stale complaints ----
@@ -109,11 +106,5 @@ BEGIN
   SET status = 'Resolved'
   WHERE status = 'Pending' AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
   SELECT ROW_COUNT() AS auto_resolved_count;
-END$$
+END $$
 DELIMITER ;
-
--- ---- ACID DEMO (run manually in mariadb shell) ----
--- Atomicity   : START TRANSACTION; INSERT ...; UPDATE ...; ROLLBACK;
--- Consistency : INSERT complaint with user_id=999 → FK error, DB unchanged
--- Isolation   : SET TRANSACTION ISOLATION LEVEL REPEATABLE READ; START TRANSACTION; SELECT ...;
--- Durability  : After COMMIT, restart server → data still present
